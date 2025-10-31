@@ -20,7 +20,7 @@ public:
     float u_frequency = 0.3f;
     float u_speed = 2.0f;
 
-    glm::vec3 u_lightPos = glm::vec3(2.0f, 5.0f, 3.0f);
+    glm::vec3 u_lightPos = glm::vec3(52.0f, 55.0f, 53.0f);
     glm::vec3 u_lightColor = glm::vec3(1.0f);
     glm::vec3 u_objectColor = glm::vec3(0.0f, 0.3f, 0.8f);
 

@@ -13,11 +13,8 @@ Renderer::~Renderer() {
 }
 
 void Renderer::Start() {
-
     m_waterShader = new Shader("src/shader/vertex_shader.vert", "src/shader/fragment_shader.frag");
-    
     setupBuffers(m_waterPlane);
-
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 }
 
@@ -54,7 +51,6 @@ void Renderer::Run()
     glUniform3fv(glGetUniformLocation(m_waterShader->m_shaderID, "lightPos"), 1, glm::value_ptr(u_lightPos));
     glUniform3fv(glGetUniformLocation(m_waterShader->m_shaderID, "lightColor"), 1, glm::value_ptr(u_lightColor));
     glUniform3fv(glGetUniformLocation(m_waterShader->m_shaderID, "objectColor"), 1, glm::value_ptr(u_objectColor));
-
 
     glBindVertexArray(m_VAO);
     glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);

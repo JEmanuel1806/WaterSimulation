@@ -1,6 +1,6 @@
-#include <iostream>
 #include "App.h"
 
+#include <iostream>
 
 int main() {
     std::cout << "Renderer geladen!\n";

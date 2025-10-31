@@ -1,6 +1,7 @@
 #include "App.h"
 #include <iostream>
 
+
 // ---------- Debug Output ------------- //
 void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
     GLsizei length, const GLchar* message, const void* userParam)
@@ -27,13 +28,14 @@ App::App(int w, int h)
 {}
 
 App::~App() {
-    delete m_Renderer;
-    delete camera;
-    glfwTerminate();
-
+    ImGui::SaveIniSettingsToDisk("imgui_layout.ini");
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+
+    delete m_Renderer;
+    delete camera;
+    glfwTerminate();
 }
 
 bool App::Init() {
@@ -46,19 +48,13 @@ bool App::Init() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(m_window, true);
-    ImGui_ImplOpenGL3_Init("#version 440");
-
     m_window = glfwCreateWindow(width, height, "WaterSim", nullptr, nullptr);
     if (!m_window) {
         std::cerr << "Window creation failed\n";
         glfwTerminate();
         return false;
     }
+
     glfwMakeContextCurrent(m_window);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -74,16 +70,28 @@ bool App::Init() {
         static_cast<App*>(glfwGetWindowUserPointer(win))->mouse_button_callback(win, button, action, mods);
         });
 
-    camera = new Camera(
-        glm::vec3(125.0f, 350.0f, 10.0f), // Position (über der Mitte)
-        glm::vec3(0.0f, 0.0f, 1.0f),    // Welt-Up
-        -90.0f,                         // Yaw (Blick nach -X, passt erstmal)
-        -65.0f                          // Pitch (nach unten geneigt)
-    );
-    m_Renderer = new Renderer(camera);
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
 
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.IniFilename = "imgui_layout.ini";
+
+#define IMGUI_IMPL_OPENGL_LOADER_GLAD
+    ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+    ImGui_ImplOpenGL3_Init("#version 440");
+
+    camera = new Camera(
+        glm::vec3(125.0f, 350.0f, 10.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f),
+        -90.0f, -65.0f
+    );
+
+    m_Renderer = new Renderer(camera);
     return true;
 }
+
 
 void App::Run() {
     if (!Init()) return;
@@ -94,35 +102,14 @@ void App::Run() {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+        float fps = 1.0f / deltaTime;
 
         processInput();
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        SetupGUI();
+
         m_Renderer->Run();
-
-        // --- IMGUI FRAME START ---
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("Water Controls");
-        ImGui::Text("Wave Parameters");
-        ImGui::SliderFloat("Amplitude", &m_Renderer->u_amplitude, 0.0f, 1.0f);
-        ImGui::SliderFloat("Frequency", &m_Renderer->u_frequency, 0.0f, 2.0f);
-        ImGui::SliderFloat("Speed", &m_Renderer->u_speed, 0.0f, 5.0f);
-
-        ImGui::Separator();
-        ImGui::Text("Lighting");
-        ImGui::SliderFloat3("Light Pos", glm::value_ptr(m_Renderer->u_lightPos), -10.0f, 10.0f);
-        ImGui::ColorEdit3("Light Color", glm::value_ptr(m_Renderer->u_lightColor));
-        ImGui::ColorEdit3("Object Color", glm::value_ptr(m_Renderer->u_objectColor));
-
-        ImGui::End();
-
-        // --- RENDER SCENE ---
-        m_Renderer->Run();
-
-        // --- IMGUI FRAME END ---
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -130,6 +117,47 @@ void App::Run() {
         glfwSwapBuffers(m_window);
         glfwPollEvents();
     }
+}
+
+void App::SetupGUI()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // ---------- DOCKSPACE ---------- //
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking |
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0)); // Transparent!
+    ImGui::Begin("DockSpaceRoot", nullptr, window_flags);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
+
+    ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
+    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f),
+        ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
+
+    ImGui::End();
+
+    ImGui::Begin("Water Controls");
+    ImGui::Text("Wave Parameters");
+    ImGui::SliderFloat("Amplitude", &m_Renderer->u_amplitude, 0.0f, 1.0f);
+    ImGui::SliderFloat("Frequency", &m_Renderer->u_frequency, 0.0f, 2.0f);
+    ImGui::SliderFloat("Speed", &m_Renderer->u_speed, 0.0f, 5.0f);
+
+    ImGui::Separator();
+    ImGui::Text("Lighting");
+    ImGui::SliderFloat3("Light Pos", glm::value_ptr(m_Renderer->u_lightPos), -100.0f, 100.0f);
+    ImGui::ColorEdit3("Light Color", glm::value_ptr(m_Renderer->u_lightColor));
+    ImGui::ColorEdit3("Object Color", glm::value_ptr(m_Renderer->u_objectColor));
+
+    ImGui::End();
 }
 
 // ---------- Control Handling (Keyboard & Mouse) ------------- //

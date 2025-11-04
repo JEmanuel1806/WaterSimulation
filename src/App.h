@@ -33,8 +33,8 @@ private:
     int width = 1280;
     int height = 720;
 
-    Renderer* m_Renderer = nullptr;
-    Camera* camera = nullptr;
+    std::unique_ptr<Renderer> m_renderer;
+    std::unique_ptr<Camera> m_camera;
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;

@@ -21,7 +21,7 @@ void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum seve
 }
 
 App::App(int w, int h)
-    : m_window(nullptr), m_Renderer(nullptr), camera(nullptr),
+    : m_window(nullptr), m_renderer(nullptr), m_camera(nullptr),
     width(w), height(h),
     lastFrame(0.0f), deltaTime(0.0f), key_pressed(false),
     left_mouse_pressed(false), right_mouse_pressed(false), firstMouse(true)
@@ -33,8 +33,6 @@ App::~App() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    delete m_Renderer;
-    delete camera;
     glfwTerminate();
 }
 
@@ -82,13 +80,13 @@ bool App::Init() {
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init("#version 440");
 
-    camera = new Camera(
-        glm::vec3(125.0f, 350.0f, 10.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f),
-        -90.0f, -65.0f
+    m_camera = std::make_unique<Camera>(
+        glm::vec3(125.0f, 10.0f, 120.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        -90.0f, -0.0f
     );
 
-    m_Renderer = new Renderer(camera);
+    m_renderer = std::make_unique<Renderer>(m_camera.get());
     return true;
 }
 
@@ -96,7 +94,7 @@ bool App::Init() {
 void App::Run() {
     if (!Init()) return;
 
-    m_Renderer->Start();
+    m_renderer->Start();
 
     while (!glfwWindowShouldClose(m_window)) {
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -109,7 +107,7 @@ void App::Run() {
 
         SetupGUI();
 
-        m_Renderer->Run();
+        m_renderer->Run();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -147,15 +145,16 @@ void App::SetupGUI()
 
     ImGui::Begin("Water Controls");
     ImGui::Text("Wave Parameters");
-    ImGui::SliderFloat("Amplitude", &m_Renderer->u_amplitude, 0.0f, 1.0f);
-    ImGui::SliderFloat("Frequency", &m_Renderer->u_frequency, 0.0f, 2.0f);
-    ImGui::SliderFloat("Speed", &m_Renderer->u_speed, 0.0f, 5.0f);
+    ImGui::SliderFloat("Amplitude", &m_renderer->u_amplitude, 0.0f, 10.0f);
+    ImGui::SliderFloat("Frequency", &m_renderer->u_frequency, 0.0f, 2.0f);
+    ImGui::SliderFloat("Speed", &m_renderer->u_speed, 0.0f, 10.0f);
+    ImGui::SliderFloat("Reflection", &m_renderer->u_reflection, 0.0f, 1.0f);
 
     ImGui::Separator();
     ImGui::Text("Lighting");
-    ImGui::SliderFloat3("Light Pos", glm::value_ptr(m_Renderer->u_lightPos), -100.0f, 100.0f);
-    ImGui::ColorEdit3("Light Color", glm::value_ptr(m_Renderer->u_lightColor));
-    ImGui::ColorEdit3("Object Color", glm::value_ptr(m_Renderer->u_objectColor));
+    ImGui::SliderFloat3("Light Pos", glm::value_ptr(m_renderer->u_lightPos), -100.0f, 100.0f);
+    ImGui::ColorEdit3("Light Color", glm::value_ptr(m_renderer->u_lightColor));
+    ImGui::ColorEdit3("Object Color", glm::value_ptr(m_renderer->u_objectColor));
 
     ImGui::End();
 }
@@ -164,12 +163,12 @@ void App::SetupGUI()
 void App::processInput() {
     auto isPressed = [&](int key) { return glfwGetKey(m_window, key) == GLFW_PRESS; };
 
-    if (isPressed(GLFW_KEY_W)) camera->ProcessKeyboard(FORWARD, deltaTime);
-    if (isPressed(GLFW_KEY_S)) camera->ProcessKeyboard(BACKWARD, deltaTime);
-    if (isPressed(GLFW_KEY_A)) camera->ProcessKeyboard(LEFT, deltaTime);
-    if (isPressed(GLFW_KEY_D)) camera->ProcessKeyboard(RIGHT, deltaTime);
-    if (isPressed(GLFW_KEY_Q)) camera->ProcessKeyboard(ROTATE_LEFT, deltaTime);
-    if (isPressed(GLFW_KEY_E)) camera->ProcessKeyboard(ROTATE_RIGHT, deltaTime);
+    if (isPressed(GLFW_KEY_W)) m_camera->ProcessKeyboard(FORWARD, deltaTime);
+    if (isPressed(GLFW_KEY_S)) m_camera->ProcessKeyboard(BACKWARD, deltaTime);
+    if (isPressed(GLFW_KEY_A)) m_camera->ProcessKeyboard(LEFT, deltaTime);
+    if (isPressed(GLFW_KEY_D)) m_camera->ProcessKeyboard(RIGHT, deltaTime);
+    if (isPressed(GLFW_KEY_Q)) m_camera->ProcessKeyboard(ROTATE_LEFT, deltaTime);
+    if (isPressed(GLFW_KEY_E)) m_camera->ProcessKeyboard(ROTATE_RIGHT, deltaTime);
 
     auto toggle = [&](int key, bool& flag) {
         if (isPressed(key) && !key_pressed) {
@@ -208,4 +207,30 @@ void App::mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float yoffset = lastY - ypos;
     lastX = xpos;
     lastY = ypos;
+
+    
+    // ---- Steuerung: Licht drehen mit Strg + Linksklick ----
+    if (left_mouse_pressed && (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)) {
+        /*
+        m_renderer->lightYaw += xoffset * -0.1f;
+        m_renderer->lightPitch += yoffset * 0.1f;
+
+        m_renderer->lightPitch = glm::clamp(m_renderer->lightPitch, -89.0f, 89.0f);
+
+        float radius = 10.0f;
+        m_renderer->u_lightPos.x = radius * cos(glm::radians(m_renderer->lightYaw)) * cos(glm::radians(m_renderer->lightPitch));
+        m_renderer->u_lightPos.y = radius * sin(glm::radians(m_renderer->lightPitch));
+        m_renderer->u_lightPos.z = radius * sin(glm::radians(m_renderer->lightYaw)) * cos(glm::radians(m_renderer->lightPitch));
+        */    
+    }
+
+    // ---- Steuerung: Kamera drehen ----
+    else if (left_mouse_pressed) {
+        m_camera->ProcessMouseMovement(xoffset, yoffset);
+    }
+
+    // ---- Steuerung: Kamera pannen (verschieben) ----
+    else if (right_mouse_pressed) {
+        m_camera->ProcessMousePan(xoffset, yoffset);
+    }
 }

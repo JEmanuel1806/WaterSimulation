@@ -21,17 +21,17 @@ void MeshGrid::CreatePlane(int size)
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
 			Vertex v;
-			v.position = glm::vec3((float)j, (float)i, 0.0f);
+			v.position = glm::vec3((float)j, 0.0f, (float)i );
 			vertices.push_back(v);
 		}
 	}
 
-    for (int y = 0; y < size - 1; ++y) {
+    for (int z = 0; z < size - 1; ++z) {
         for (int x = 0; x < size - 1; ++x) {
-            unsigned int topLeft = y * size + x;
-            unsigned int bottomLeft = (y + 1) * size + x;
-            unsigned int topRight = y * size + (x + 1);
-            unsigned int bottomRight = (y + 1) * size + (x + 1);
+            unsigned int topLeft = z * size + x;
+            unsigned int bottomLeft = (z + 1) * size + x;
+            unsigned int topRight = z * size + (x + 1);
+            unsigned int bottomRight = (z + 1) * size + (x + 1);
 
             // Dreieck 1
             indices.push_back(topLeft);

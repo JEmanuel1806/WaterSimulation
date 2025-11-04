@@ -22,4 +22,5 @@ A lightweight **C++ / OpenGL 4.4** project for simulating water. WIP.
 - **ImGui** for UI integration  
 
 ---
-<img width="1915" height="1059" alt="image" src="https://github.com/user-attachments/assets/d5769756-926d-4635-8de2-7fb943cf966f" />
+<img width="1913" height="1129" alt="image" src="https://github.com/user-attachments/assets/6c583b6a-191d-48bc-a094-df462d4453f9" />
+
